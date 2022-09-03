@@ -1,0 +1,192 @@
+﻿@page
+@model Teste.AppWeb.Pages.ProdutosModel
+@{
+    ViewData["Title"] = "Listagem de produtos";
+}
+<h1>@ViewData["Title"]</h1>
+
+
+<div class="row">&nbsp;</div>
+<div class="row">
+    <div class="col-md-12">
+        <button class="btn btn-primary" id="btnAdicionar">Adicionar novo produto</button>
+    </div>
+</div>
+
+<div class="row">&nbsp;</div>
+<div class="row">
+    <table id="grdProdutos" class="table">
+    </table>
+</div>
+
+<div class="modal maintance" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form novalidate id="frmMaintance" class="col-md-12">
+                    <input type="hidden" class="record-id" name="id" id="id" />
+                    <div class="form-group">
+                        <label>Nome:</label>
+                        <input type="text" class="form-control" name="descricao" maxlength="150" required id="descricao" />
+                        <div class="invalid-feedback">
+                            Nome obrigatório e de no máximo 150 caracteres.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria:</label>
+                        <select class="form-select" required asp-items="Model.Categorias" id="categoria"></select>
+                        <div class="invalid-feedback">
+                            Selecione a categoria.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor:</label>
+                        <input type="number" class="form-control" name="valor" required id="valor" />
+                        <div class="invalid-feedback">
+                            Informe um valor válido.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary confirm">Gravar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal delete" tabindex="-1">
+    <input type="hidden" class="record-id" />
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Apagar?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Deseja excluir este produto?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+                <button type="button" class="btn btn-primary confirm">Sim</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts{
+    <script>
+        $(document).ready(function () {
+            const buttonEdit = "<a href='#' class='btn btn-primary btn-icon text-white mr-2 editButton' data-toggle='tooltip' title='' data-placement='top' data-original-title='Editar'><span><i class='fa-solid fa-pen-to-square'></i></span></a>";
+            const buttonDelete = "<a href='#' class='btn btn-danger btn-icon text-white mr-2 deleteButton' data-toggle='tooltip' title='' data-placement='top' data-original-title='Apagar'><i class='fa-solid fa-trash-can'></i></span></a>";
+            const buttons = buttonEdit + "&nbsp;" + buttonDelete;
+
+            const modalMaintenance = $(".maintance").appendTo("body").modal({ show: false });
+            const modalMaintenanceRecordId = $(".record-id", modalMaintenance);
+            const modalDelete = $(".delete").appendTo("body").modal({ show: false });
+            const modalDeleteRecordId = $(".record-id", modalDelete);
+
+            const internalShowModal = function (record) {
+                let title = "Incluindo";
+                $(".modal-title", modalMaintenance).html(title);
+                $("form", modalMaintenance)[0].reset();
+                modalMaintenanceRecordId.val(undefined);
+                if (record) {
+                    modalMaintenanceRecordId.val(record.id);
+                    $("#descricao", modalMaintenance).val(record.descricao);
+                    $("#descricao", modalMaintenance).val(record.descricao);
+                    $("#categoria").val(record.categoriaId);
+                    $("#valor",modalMaintenance).val(record.valor);
+                }
+                modalMaintenance.modal("show");
+            };
+
+            $(".confirm", modalMaintenance).on("click", function (e) {
+                const incluindo = modalMaintenanceRecordId.val() === "";
+                const endpoint = incluindo ? "adicionar" : "alterar";
+                const method = incluindo ? "POST" : "PUT";
+                $.ajax({
+                    url: "@(Model.BaseUrl)/api/produto/" + endpoint,
+                    type: method,
+                    headers: { "Content-Type": "application/json" },
+                    data: JSON.stringify({
+                        id: $("#id").val(),
+                        descricao: $("#descricao").val(),
+                        categoriaId: $("#categoria option:selected").val(),
+                        valor:$("#valor").val()
+                    }),
+                    success: function (data) {
+                        $table.ajax.reload(null, false);
+                        modalMaintenance.modal("hide");
+                    },
+                    error: function (request, status, error) {
+                        alert(request.responseText);
+                    }
+                });
+            });
+
+            const internalShowConfirmDeleteModal = function (record) {
+                modalDeleteRecordId.val(record.id);
+                modalDelete.modal("show");
+            };
+            $(".confirm", modalDelete).on("click", function (e) {
+                $.ajax({
+                    url: "@(Model.BaseUrl)/api/produto/apagar/" + modalDeleteRecordId.val(),
+                    type: "DELETE",
+                    success: function (data) {
+                        $table.ajax.reload(null, false);
+                        modalDelete.modal("hide");
+                    },
+                    error: function (request, status, error) {
+                        alert(request.responseText);
+                    }
+                });
+            });
+
+            $("#btnAdicionar").on("click", () => {
+                internalShowModal();
+            });
+
+            const $table = CustomDatatable.create(
+                $('#grdProdutos'),
+                "@(Model.BaseUrl)/api/produto/listar",
+                "GET",
+                [
+                    { data: "descricao", title: "Descrição", searchable: false, className: "colunm-vertical-align" },
+                    { data: "categoriaNome", title: "Categoria", searchable: false, className: "colunm-vertical-align" },
+                    { data: "valor", title: "Valor", searchable: false, className: "colunm-vertical-align" },
+                    { data: null, defaultContent: buttons, title: "Ações", width: "150px", className: "grid-actions" }
+                ],
+                [],
+                {
+                    filter: false
+                }
+            ).on("draw", e => {
+                $(".editButton", $(this))
+                    .off("click")
+                    .on("click", function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var tr = $(this).closest("tr");
+                        internalShowModal($table.row(tr).data());
+                    });
+                $(".deleteButton", $(this))
+                    .off("click")
+                    .on("click", function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var tr = $(this).closest("tr");
+                        internalShowConfirmDeleteModal($table.row(tr).data());
+                    });
+                $(".grid-actions", $(this))
+                    .attr("align", "center");
+            });
+        });
+    </script>
+}

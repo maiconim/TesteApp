@@ -1,0 +1,11 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Página inicial";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Bem vindo</h1>
+    <p>Atualmente você possuí <b>@Model.QuantidadeCategorias</b> categoria(s) cadastrada(s) e <b>@Model.QuantidadeProdutos</b> produto(s) cadastrado(s).</p>
+    <p>Use o menu de navegação no topo da página ou <a asp-area="" asp-page="/Categorias">clique aqui para listar as categorias</a> ou <a asp-area="" asp-page="/Produtos">aqui para listar os produtos</a>.</p>
+</div>
